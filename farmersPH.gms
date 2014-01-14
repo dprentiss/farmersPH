@@ -73,6 +73,9 @@ table yield(scenario, crop)
 1  0       0       0 
    ;
 
+scalar rho / 3 /;
+scalar threshold / 0.1 /
+
 positive variables
 
   plant(crop)
@@ -87,26 +90,36 @@ variables
 
 *** calculation variables
 
-  WSobjectives(scenarios)  objective values for each WS scenario
-  EVobjectives(scenarios)  objective values for each EV scenario
-  WS                       wait-and-see value
-  EVV                      expected result of using the expected value solution
+  ExpPlant(crop)
+  g
+  ws(scenarios, crop)
+  w(scenario, crop)
 
 equations
 
-  obj                         minimize negative profit
+  obj0                        minimize negative profit
+  objk                        minimize negative profit
   land                        must not exceed maximum land area
   quotaWheat(scenario)        wheat quota must be met
   quotaCorn(scenario)         corn quota must be met
   quotaBeets(scenario)        beets must not exceed quota
   quotaExcessBeets(scenario)  excessBeets exceed quota;
   
-obj..
+obj0..
   z
   =E= sum(crop, plantingCost(crop) * plant(crop))
       - sum(scenario, scenarioProb(scenario)
         * (sum(surplus, sell(surplus, scenario) * salePrice(surplus))
            - sum(need, purchase(need, scenario) * purchasePrice(need))));
+        
+objk..
+  z
+  =E= sum(crop, plantingCost(crop) * plant(crop))
+      - sum(scenario, scenarioProb(scenario)
+        * (sum(surplus, sell(surplus, scenario) * salePrice(surplus))
+           - sum(need, purchase(need, scenario) * purchasePrice(need))))
+      + sum((scenario, crop), w(scenario, crop) * plant(crop))
+      + rho/2 * sqrt(sum(crop, (plant.l(crop) - ExpPlant.l(crop))**2))**2;
 
 land..
   sum(crop, plant(crop))
@@ -132,52 +145,52 @@ quotaExcessBeets(scenario)..
   sell("beets", scenario) + sell("excessBeets", scenario)
   =L= yield(scenario, "beets") * plant("beets");
   
-model hw1_5a /all/;
+model firstIter / obj0, land, quotaWheat, quotaCorn, quotaBeets, quotaExcessBeets /;
+model kthIter / objk, land, quotaWheat, quotaCorn, quotaBeets, quotaExcessBeets /;
 option solprint = off;
 
-*** compute the wait-and-see objective value WS
-
-loop(scenarios,
-  loop(crop,
-    yield("1", crop) = yields(scenarios, crop);
-    )
-  solve hw1_5a using lp minimizing z;
-  WSobjectives.l(scenarios) = z.l;
-  );
-WS.l =  sum(scenarios, scenariosProb(scenarios)*WSobjectives.l(scenarios));
-
-*** compute the expected value of the yields
-
-loop(crop,
-  yield("1", crop) = sum(scenarios, scenariosProb(scenarios)*yields(scenarios, crop));
-  );
-
-*** find the expected value solution
-
-solve hw1_5a using lp minimizing z;
-
-*** compute the expected result of using the expected value solution EEV
-
-loop(crop,
-  plant.fx(crop) = plant.l(crop);
-  )
-
-loop(scenarios,
-  loop(crop,
-    yield("1", crop) = yields(scenarios, crop);
-    )
-  solve hw1_5a using lp minimizing z;
-  display plant.l;
-  EVobjectives.l(scenarios) = z.l;
-  );
-EVV.l =  sum(scenarios, scenariosProb(scenarios)*EVobjectives.l(scenarios));
-
-*** output data
+*** init output
 
 file out / farmersPH.put /
 put out;
-put 'Wait-and-see objective value';
-put WS.l /;
-put 'Expected result of using the expected value solution';
-put EVV.l;
+
+*** solve each scenario without penalties
+
+loop(crop,
+  ExpPlant.l(crop) = 0;
+  );
+loop(scenarios,
+  loop(crop,
+    yield("1", crop) = yields(scenarios, crop);
+    );
+  solve firstIter using lp minimizing z;
+  loop(crop,
+    ExpPlant.l(crop) = ExpPlant.l(crop) + scenariosProb(scenarios) * plant.l(crop);
+    ws.l(scenarios, crop) = rho * (plant.l(crop) - ExpPlant.l(crop));
+    );
+  );
+
+put '1'; loop(crop, put ExpPlant.l(crop)); put /;
+
+g.l = 1;
+while(g.l gt threshold,
+  loop(crop,
+    ExpPlant.l(crop) = 0;
+    );
+  g.l = 0;
+  loop(scenarios,
+    loop(crop,
+      w.l("1", crop) = ws.l(scenarios, crop);
+      yield("1", crop) = yields(scenarios, crop);
+      );
+    solve kthIter using nlp minimizing z;
+    loop(crop,
+      ExpPlant.l(crop) = ExpPlant.l(crop) + scenariosProb(scenarios) * plant.l(crop);
+      ws.l(scenarios, crop) = ws.l(scenarios,  crop) + rho * (plant.l(crop) - ExpPlant.l(crop));
+      );
+    );
+  put 'k'; loop(crop, put ExpPlant.l(crop)); put /;
+  );
+
+*** close output
 putclose out;
