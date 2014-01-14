@@ -37,13 +37,11 @@ parameters
   w(crop)
 
 *** probabilities for each scenario
-
   scenarioProb(scenarios)   / 1 0.3333333333333333
                               2 0.3333333333333333
                               3 0.3333333333333333 /
 
 *** all yields by scenario
-
 table yields(scenarios, crop)
 
    wheat   corn    beets
@@ -51,8 +49,6 @@ table yields(scenarios, crop)
 1  2.0     2.4     16
 2  2.5     3.0     20
 3  3.0     3.6     24
-
-*** current scenario yields
 
 scalar rho / 2 /
 scalar threshold / 0.1 /
@@ -80,13 +76,15 @@ equations
 
 obj0..
   z
-  =E= sum(crop, plantingCost(crop) * plant(crop))
+  =E=
+  sum(crop, plantingCost(crop) * plant(crop))
       - prob * (sum(surplus, sell(surplus) * salePrice(surplus))
            - sum(need, purchase(need) * purchasePrice(need)));
 
 objk..
   z
-  =E= sum(crop, plantingCost(crop) * plant(crop))
+  =E=
+  sum(crop, plantingCost(crop) * plant(crop))
       - prob * (sum(surplus, sell(surplus) * salePrice(surplus))
            - sum(need, purchase(need) * purchasePrice(need)))
       + sum(crop, w(crop) * plant(crop))
@@ -123,6 +121,7 @@ put out;
 *** solve each scenario without penalties
 loop(crop, Eplant(crop) = 0;);
 loop(scenarios,
+  prob = scenarioProb(scenarios);
   loop(crop,
     yield(crop) = yields(scenarios, crop);
     );
