@@ -75,15 +75,15 @@ obj0..
   z
   =E=
   sum(crop, plantingCost(crop) * plant(crop))
-      - prob * (sum(surplus, sell(surplus) * salePrice(surplus))
-           - sum(need, purchase(need) * purchasePrice(need)));
+      - sum(surplus, sell(surplus) * salePrice(surplus))
+      + sum(need, purchase(need) * purchasePrice(need));
 
 objk..
   z
   =E=
   sum(crop, plantingCost(crop) * plant(crop))
-      - prob * (sum(surplus, sell(surplus) * salePrice(surplus))
-           - sum(need, purchase(need) * purchasePrice(need)))
+      - sum(surplus, sell(surplus) * salePrice(surplus))
+      + sum(need, purchase(need) * purchasePrice(need))
       + sum(crop, w(crop) * plant(crop))
       + rho/2 * sqrt(sum(crop, power((plant(crop) - EPlant(crop)), 2)))**2;
 
@@ -130,7 +130,7 @@ loop(scenarios,
 put '1'; loop(crop, put EPlant(crop)); put /;
 
 *** solve penalized version until converged
-g = .5;
+g = 30;
 while(g gt threshold,
   loop(crop, EPlant(crop) = 0;);
   loop(scenarios,
@@ -142,10 +142,10 @@ while(g gt threshold,
     solve kthIter using nlp minimizing z;
     loop(crop,
       EPlant(crop) = EPlant(crop) + prob * plant.l(crop);
-      ws(scenarios, crop) = ws(scenarios, crop) + rho * (plant.l(crop) - EPlant(crop));
+      ws(scenarios, crop) = rho * (plant.l(crop) - EPlant(crop));
       );
     );
-    g = g - 0.1;
+    g = g - 1;
   put 'k'; loop(crop, put EPlant(crop)); put /;
   );
 
