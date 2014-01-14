@@ -43,24 +43,21 @@ parameters
 
 *** all yields by scenario
 table yields(scenarios, crop)
-
    wheat   corn    beets
-
 1  2.0     2.4     16
 2  2.5     3.0     20
 3  3.0     3.6     24
 
-scalar rho / 2 /
-scalar threshold / 0.1 /
+scalar
+  rho / 2 /
+  threshold / 0.1 /
 
 positive variables
-
   plant(crop)
   purchase(need)
   sell(surplus)
 
 variables
-
   z                           current objective value
 
 equations
@@ -122,9 +119,7 @@ put out;
 loop(crop, Eplant(crop) = 0;);
 loop(scenarios,
   prob = scenarioProb(scenarios);
-  loop(crop,
-    yield(crop) = yields(scenarios, crop);
-    );
+  loop(crop, yield(crop) = yields(scenarios, crop););
   solve firstIter using lp minimizing z;
   loop(crop,
     Eplant(crop) = Eplant(crop) + prob * plant.l(crop);
@@ -134,11 +129,12 @@ loop(scenarios,
 
 put '1'; loop(crop, put EPlant(crop)); put /;
 
-g = 1;
+*** solve penalized version until converged
+g = .5;
 while(g gt threshold,
   loop(crop, EPlant(crop) = 0;);
-  g = g - 0.1;
   loop(scenarios,
+    prob = scenarioProb(scenarios);
     loop(crop,
       w(crop) = ws(scenarios, crop);
       yield(crop) = yields(scenarios, crop);
@@ -149,6 +145,7 @@ while(g gt threshold,
       ws(scenarios, crop) = ws(scenarios, crop) + rho * (plant.l(crop) - EPlant(crop));
       );
     );
+    g = g - 0.1;
   put 'k'; loop(crop, put EPlant(crop)); put /;
   );
 
