@@ -121,10 +121,10 @@ loop(scenarios,
   prob = scenarioProb(scenarios);
   loop(crop, yield(crop) = yields(scenarios, crop););
   solve firstIter using lp minimizing z;
-  loop(crop,
-    Eplant(crop) = Eplant(crop) + prob * plant.l(crop);
-    ws(scenarios, crop) = rho * (plant.l(crop) - EPlant(crop));
-    );
+  loop(crop, Eplant(crop) = Eplant(crop) + prob * plant.l(crop););
+  );
+loop((crop, scenarios),
+  ws(scenarios, crop) = rho * (plant.l(crop) - EPlant(crop));
   );
 
 put '1'; loop(crop, put EPlant(crop)); put /;
@@ -140,12 +140,12 @@ while(g gt threshold,
       yield(crop) = yields(scenarios, crop);
       );
     solve kthIter using nlp minimizing z;
-    loop(crop,
-      EPlant(crop) = EPlant(crop) + prob * plant.l(crop);
-      ws(scenarios, crop) = rho * (plant.l(crop) - EPlant(crop));
-      );
+    loop(crop, EPlant(crop) = EPlant(crop) + prob * plant.l(crop););
     );
-    g = g - 1;
+  loop((crop, scenarios),
+    ws(scenarios, crop) = rho * (plant.l(crop) - EPlant(crop));
+    );
+  g = g - 1;
   put 'k'; loop(crop, put EPlant(crop)); put /;
   );
 
