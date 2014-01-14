@@ -65,9 +65,7 @@ positive variables
 
 variables
 
-  y
   z                           current objective value
-  ;
 
 equations
 
