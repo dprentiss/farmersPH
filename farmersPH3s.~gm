@@ -71,6 +71,7 @@ variables
 
 equations
 
+  objTest
   obj0                        minimize negative profit
   objk                        minimize negative profit
   land                        must not exceed maximum land area
