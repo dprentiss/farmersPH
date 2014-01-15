@@ -36,6 +36,7 @@ parameters
   g
   ws(scenarios, crop)
   w(crop)
+  k
 
 *** probabilities for each scenario
   scenarioProb(scenarios)   / 1 0.3333333333333333
@@ -50,8 +51,8 @@ table yields(scenarios, crop)
 3  3.0     3.6     24
 
 scalar
-  rho / 2 /
-  threshold / 0.1 /
+  rho / 1.2 /
+  threshold / 0.001 /
 
 positive variables
   plant(crop)
@@ -130,11 +131,12 @@ loop(scenarios,
 loop((scenarios, crop),
   ws(scenarios, crop) = rho * (ws(scenarios, crop) - EPlant(crop));
   );
-
-put '1'; loop(crop, put EPlant(crop)); put /;
+g = sum(scenarios, scenarioProb(scenarios) 
+    * sqrt(sum(crop, power(plant.l(crop) - Eplant(crop),2))));
+k = 0;
+put k:>5:0, loop(crop, put EPlant(crop):>10:3); put g:>10:4 /;
 
 *** solve penalized version until converged
-g = 100;
 while(g gt threshold,
   loop(crop, EPlantNew(crop) = 0;);
   loop(scenarios,
@@ -153,8 +155,10 @@ while(g gt threshold,
   loop((scenarios, crop),
     ws(scenarios, crop) = ws(scenarios, crop) - rho * EPlant(crop);
     );
-  g = 1;
-  put 'k'; loop(crop, put EPlant(crop)); put /;
+  g = sum(scenarios, scenarioProb(scenarios) 
+      * sqrt(sum(crop, power(plant.l(crop) - Eplant(crop),2))));
+  k = k + 1;
+  put k:>5:0, loop(crop, put EPlant(crop):>10:3); put g:>10:4 /;
   );
 
 *** close output
