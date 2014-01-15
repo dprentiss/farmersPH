@@ -32,6 +32,7 @@ parameters
   yield(crop)
   prob
   Eplant(crop)
+  EplantNew(crop)
   g
   ws(scenarios, crop)
   w(crop)
@@ -121,18 +122,21 @@ loop(scenarios,
   prob = scenarioProb(scenarios);
   loop(crop, yield(crop) = yields(scenarios, crop););
   solve firstIter using lp minimizing z;
-  loop(crop, Eplant(crop) = Eplant(crop) + prob * plant.l(crop););
+  loop(crop,
+    Eplant(crop) = Eplant(crop) + prob * plant.l(crop);
+    ws(scenarios, crop) = plant.l(crop);
+    );
   );
-loop((crop, scenarios),
-  ws(scenarios, crop) = rho * (plant.l(crop) - EPlant(crop));
+loop((scenarios, crop),
+  ws(scenarios, crop) = rho * (ws(scenarios, crop) - EPlant(crop));
   );
 
 put '1'; loop(crop, put EPlant(crop)); put /;
 
 *** solve penalized version until converged
-g = 30;
+g = 100;
 while(g gt threshold,
-  loop(crop, EPlant(crop) = 0;);
+  loop(crop, EPlantNew(crop) = 0;);
   loop(scenarios,
     prob = scenarioProb(scenarios);
     loop(crop,
@@ -140,12 +144,16 @@ while(g gt threshold,
       yield(crop) = yields(scenarios, crop);
       );
     solve kthIter using nlp minimizing z;
-    loop(crop, EPlant(crop) = EPlant(crop) + prob * plant.l(crop););
+    loop(crop,
+      EPlantNew(crop) = EPlantNew(crop) + prob * plant.l(crop);
+      ws(scenarios, crop) = ws(scenarios, crop) + rho * plant.l(crop);
     );
-  loop((crop, scenarios),
-    ws(scenarios, crop) = rho * (plant.l(crop) - EPlant(crop));
+  );
+  loop(crop, Eplant(crop) = EplantNew(crop););
+  loop((scenarios, crop),
+    ws(scenarios, crop) = ws(scenarios, crop) - rho * EPlant(crop);
     );
-  g = g - 1;
+  g = 1;
   put 'k'; loop(crop, put EPlant(crop)); put /;
   );
 
