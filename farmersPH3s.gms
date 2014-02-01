@@ -51,8 +51,8 @@ table yields(scenarios, crop)
 3  3.0     3.6     24
 
 scalar
-  rho / 1.2 /
-  threshold / 0.001 /
+  rho / 2 /
+  threshold / 0.000001 /
 
 positive variables
   plant(crop)
